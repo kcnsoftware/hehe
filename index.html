@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kcnsoftware :3</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Caveat (El Yazısı), Playfair Display & Cormorant Garamond -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Cormorant Garamond', serif;
+            background: radial-gradient(circle at 50% 35%, #2a113b 0%, #170824 50%, #0d0316 100%);
+        }
+        .font-handwriting {
+            font-family: 'Caveat', cursive;
+        }
+        .font-serif-title {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Soft Purple Glow Effect */
+        .bouquet-glow {
+            filter: drop-shadow(0 15px 40px rgba(168, 85, 247, 0.25));
+        }
+        /* Glassmorphism Dark Violet Card */
+        .paper-card {
+            background: rgba(35, 17, 51, 0.75);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(192, 132, 252, 0.25);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5),
+                        0 0 0 1px rgba(216, 180, 254, 0.15) inset;
+        }
+        /* Custom Textarea scrollbar */
+        textarea::-webkit-scrollbar {
+            width: 4px;
+        }
+        textarea::-webkit-scrollbar-thumb {
+            background: #c084fc;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center px-4 py-8 text-purple-100 overflow-x-hidden selection:bg-purple-900 selection:text-purple-200">
+
+    <!-- Ambient Particles Layer -->
+    <canvas id="ambientCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+
+    <!-- Header / Title -->
+    <header class="z-10 text-center max-w-lg mx-auto mb-2 opacity-90">
+        <h1 class="font-serif-title text-2xl md:text-3xl font-semibold text-purple-100 tracking-wide">
+            Kasımpatı & Lotus Buketi
+        </h1>
+        <p class="text-xs md:text-sm text-purple-300/70 font-serif italic mt-1">
+            Hazala
+        </p>
+    </header>
+
+    <!-- Main Content Container: Bouquet + Note Card -->
+    <main class="z-10 w-full max-w-4xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-12 my-auto">
+        
+        <!-- Bouquet Visual Area (Canvas) -->
+        <div class="relative w-full max-w-md aspect-[4/5] flex items-center justify-center cursor-pointer group">
+            
+            <!-- Canvas bouquet -->
+            <canvas id="bouquetCanvas" class="w-full h-full bouquet-glow transition-transform duration-700 group-hover:scale-105 touch-none"></canvas>
+
+            <!-- Interactive Hint -->
+            <div id="tapHint" class="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full bg-purple-950/70 backdrop-blur-md border border-purple-400/30 text-purple-200 text-xs font-sans tracking-wide shadow-lg pointer-events-none transition-opacity duration-500 flex items-center space-x-2">
+                <i class="fa-solid fa-sparkles text-purple-300"></i>
+                <span>Dokun & Mor Işıltıları Saç</span>
+            </div>
+        </div>
+
+        <!-- Handwritten Note Card -->
+        <div class="w-full max-w-md">
+            <div class="paper-card rounded-3xl p-6 sm:p-8 relative transition-all duration-500 hover:shadow-2xl">
+                
+                <!-- Decorative Corner Flowers -->
+                <div class="absolute top-4 right-4 text-purple-400/50 text-lg">✦ 🪷 ✦</div>
+
+                <!-- Letter Header -->
+                <div class="mb-4">
+                    <span class="text-xs uppercase tracking-widest text-purple-300/70 font-sans font-semibold">Özel Mesaj</span>
+                    <h2 class="text-xl font-serif-title text-purple-50 font-semibold mt-0.5">Sana Bir Not var...</h2>
+                </div>
+
+                <!-- Editable Handwritten Note Area -->
+                <div class="relative my-4">
+                    <textarea id="noteInput" rows="5" class="w-full bg-transparent font-handwriting text-2xl sm:text-3xl text-purple-100 focus:outline-none resize-none leading-relaxed placeholder-purple-300/40 border-b border-purple-500/20 focus:border-purple-400/60 transition-colors" placeholder="Buraya özel duygularını ve mesajını yazabilirsin..."></textarea>
+                    <i class="fa-solid fa-pen text-xs text-purple-300/40 absolute bottom-3 right-2 pointer-events-none"></i>
+                </div>
+
+                <!-- Simple Card Footer -->
+                <div class="flex items-center justify-center pt-3 border-t border-purple-500/20 mt-4 font-sans">
+                    <span id="saveStatus" class="text-xs text-purple-300/60 italic font-serif">  </span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Minimal Footer -->
+    <footer class="z-10 text-center text-xs text-purple-300/40 font-serif mt-6">
+        Kcnsoftware
+    </footer>
+
+    <!-- JavaScript Engine -->
+    <script>
+        // --- 1. Canvas & Bouquet Generation ---
+        const canvas = document.getElementById('bouquetCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        const bouquetState = {
+            flowers: [],
+            sparkles: [],
+            petals: []
+        };
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * window.devicePixelRatio;
+            canvas.height = rect.height * window.devicePixelRatio;
+            width = canvas.width;
+            height = canvas.height;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            generateFlowers();
+        }
+
+        // Generate static bouquet arrangement (Deep Purple Chrysanthemum & Lavender Lotus)
+        function generateFlowers() {
+            const logicalW = width / window.devicePixelRatio;
+            const logicalH = height / window.devicePixelRatio;
+            const centerX = logicalW / 2;
+            const centerY = logicalH * 0.42;
+
+            bouquetState.flowers = [];
+
+            // Rich Purple & Lavender Flower Layout
+            const layout = [
+                { type: 'chrysa', radius: 0, angle: 0, scale: 1.05, color: '#a855f7' },       // Deep Purple Chrysanthemum
+                { type: 'lotus', radius: 45, angle: 0.5, scale: 1.0, color: '#e879f9' },      // Bright Lavender Lotus
+                { type: 'chrysa', radius: 55, angle: 2.1, scale: 0.95, color: '#c084fc' },    // Soft Violet Chrysa
+                { type: 'lotus', radius: 50, angle: 3.6, scale: 0.95, color: '#f472b6' },    // Orchid Pink Lotus
+                { type: 'chrysa', radius: 60, angle: 4.9, scale: 0.9, color: '#7e22ce' },     // Dark Purple Chrysa
+                { type: 'lotus', radius: 85, angle: 1.3, scale: 0.85, color: '#e9d5ff' },    // Light Lilac Lotus
+                { type: 'chrysa', radius: 90, angle: 2.9, scale: 0.85, color: '#d8b4fe' },    // Light Lavender Chrysa
+                { type: 'lotus', radius: 80, angle: 4.2, scale: 0.85, color: '#9333ea' },    // Vivid Violet Lotus
+                { type: 'chrysa', radius: 95, angle: 5.7, scale: 0.8, color: '#c084fc' }     // Lavender Chrysa
+            ];
+
+            layout.forEach((item, index) => {
+                const x = centerX + Math.cos(item.angle) * item.radius;
+                const y = centerY + Math.sin(item.angle) * (item.radius * 0.75);
+
+                bouquetState.flowers.push({
+                    x, y,
+                    type: item.type,
+                    scale: item.scale,
+                    color: item.color,
+                    phase: index * 0.7
+                });
+            });
+
+            // Sort depth
+            bouquetState.flowers.sort((a, b) => a.y - b.y);
+        }
+
+        // Render Ribbon & Wrapper (Purple & Silk Lilac)
+        function drawWrapper(logicalW, logicalH) {
+            const centerX = logicalW / 2;
+            const bottomY = logicalH * 0.92;
+            const tieY = logicalH * 0.65;
+
+            ctx.save();
+
+            // Paper Wrapper Outer Shape (Deep Purple Silk)
+            ctx.fillStyle = '#3b0764'; // Deep Plum / Dark Purple
+            ctx.beginPath();
+            ctx.moveTo(centerX - 110, tieY - 40);
+            ctx.lineTo(centerX + 110, tieY - 40);
+            ctx.lineTo(centerX + 35, bottomY);
+            ctx.lineTo(centerX - 35, bottomY);
+            ctx.closePath();
+            ctx.fill();
+
+            // Wrapper Shading & Folds
+            const grad = ctx.createLinearGradient(centerX - 100, tieY, centerX + 100, tieY);
+            grad.addColorStop(0, 'rgba(0,0,0,0.3)');
+            grad.addColorStop(0.5, 'rgba(192,132,252,0.25)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Elegant Silk Ribbon (Shimmering Lilac / Gold accent)
+            ctx.fillStyle = '#c084fc';
+            ctx.beginPath();
+            ctx.ellipse(centerX, tieY, 32, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bow Ends
+            ctx.beginPath();
+            ctx.moveTo(centerX - 4, tieY + 4);
+            ctx.quadraticCurveTo(centerX - 25, tieY + 40, centerX - 35, tieY + 70);
+            ctx.lineTo(centerX - 18, tieY + 70);
+            ctx.quadraticCurveTo(centerX - 4, tieY + 30, centerX, tieY + 8);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(centerX + 4, tieY + 4);
+            ctx.quadraticCurveTo(centerX + 25, tieY + 40, centerX + 35, tieY + 70);
+            ctx.lineTo(centerX + 18, tieY + 70);
+            ctx.quadraticCurveTo(centerX + 4, tieY + 30, centerX, tieY + 8);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Render Stems
+        function drawStems(logicalW, logicalH) {
+            const centerX = logicalW / 2;
+            const tieY = logicalH * 0.65;
+
+            ctx.save();
+            ctx.strokeStyle = '#2e5a44';
+            ctx.lineWidth = 3.5;
+            ctx.lineCap = 'round';
+
+            bouquetState.flowers.forEach(f => {
+                ctx.beginPath();
+                ctx.moveTo(f.x, f.y);
+                ctx.quadraticCurveTo(centerX + (f.x - centerX) * 0.3, tieY, centerX, tieY + 10);
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+
+        // Draw Detailed Purple Chrysanthemum (Kasımpatı)
+        function drawChrysanthemum(ctx, x, y, scale, color, time, phase) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Gentle Sway Animation
+            const sway = Math.sin(time * 1.5 + phase) * 0.04;
+            ctx.rotate(sway);
+            ctx.scale(scale, scale);
+
+            const petalRings = 5;
+            const petalsPerRing = 14;
+
+            for (let ring = petalRings; ring >= 1; ring--) {
+                const ringRadius = ring * 8.5;
+                const ringPetals = petalsPerRing + ring * 2;
+
+                ctx.fillStyle = ring === 1 ? '#fbbf24' : color; // Warm golden inner ring
+                ctx.strokeStyle = 'rgba(30,0,50,0.15)';
+                ctx.lineWidth = 0.7;
+
+                for (let i = 0; i < ringPetals; i++) {
+                    const angle = (i / ringPetals) * Math.PI * 2 + (ring * 0.25);
+                    ctx.save();
+                    ctx.rotate(angle);
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.quadraticCurveTo(3.5, -ringRadius * 0.6, 1.2, -ringRadius);
+                    ctx.quadraticCurveTo(0, -ringRadius - 2.5, -1.2, -ringRadius);
+                    ctx.quadraticCurveTo(-3.5, -ringRadius * 0.6, 0, 0);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            }
+
+            // Center Heart
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Draw Violet Lotus (Nilüfer)
+        function drawLotus(ctx, x, y, scale, color, time, phase) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            const sway = Math.cos(time * 1.3 + phase) * 0.05;
+            ctx.rotate(sway);
+            ctx.scale(scale, scale);
+
+            const layers = [
+                { count: 9, radius: 42, width: 15, color: '#f3e8ff' },
+                { count: 7, radius: 32, width: 13, color: color },
+                { count: 5, radius: 22, width: 10, color: '#7e22ce' }
+            ];
+
+            layers.forEach(layer => {
+                for (let i = 0; i < layer.count; i++) {
+                    const angle = (i / layer.count) * Math.PI * 2;
+                    ctx.save();
+                    ctx.rotate(angle);
+
+                    ctx.fillStyle = layer.color;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 0.8;
+
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.quadraticCurveTo(layer.width, -layer.radius * 0.5, 0, -layer.radius);
+                    ctx.quadraticCurveTo(-layer.width, -layer.radius * 0.5, 0, 0);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+            });
+
+            // Golden Center
+            ctx.fillStyle = '#fef08a';
+            ctx.beginPath();
+            ctx.arc(0, 0, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Purple Sparkles Burst on Interaction
+        function spawnSparkles(x, y) {
+            const colors = ['#c084fc', '#e879f9', '#f0abfc', '#ffffff', '#fbbf24'];
+            for (let i = 0; i < 14; i++) {
+                bouquetState.sparkles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 5.5,
+                    vy: (Math.random() - 0.5) * 5.5 - 1.5,
+                    size: 2 + Math.random() * 3.5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    life: 1
+                });
+            }
+        }
+
+        function updateParticles() {
+            for (let i = bouquetState.sparkles.length - 1; i >= 0; i--) {
+                const s = bouquetState.sparkles[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                s.life -= 0.022;
+
+                if (s.life <= 0) {
+                    bouquetState.sparkles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = s.life;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // Animation Loop
+        let time = 0;
+        function renderBouquet() {
+            time += 0.02;
+            const logicalW = width / window.devicePixelRatio;
+            const logicalH = height / window.devicePixelRatio;
+
+            ctx.clearRect(0, 0, logicalW, logicalH);
+
+            drawStems(logicalW, logicalH);
+
+            bouquetState.flowers.forEach(f => {
+                if (f.type === 'chrysa') {
+                    drawChrysanthemum(ctx, f.x, f.y, f.scale, f.color, time, f.phase);
+                } else {
+                    drawLotus(ctx, f.x, f.y, f.scale, f.color, time, f.phase);
+                }
+            });
+
+            drawWrapper(logicalW, logicalH);
+            updateParticles();
+
+            requestAnimationFrame(renderBouquet);
+        }
+
+        // --- 2. Ambient Floating Purple Background Particles ---
+        const ambientCanvas = document.getElementById('ambientCanvas');
+        const actx = ambientCanvas.getContext('2d');
+        let ambW, ambH;
+        let ambientParticles = [];
+
+        function resizeAmbient() {
+            ambW = ambientCanvas.width = window.innerWidth;
+            ambH = ambientCanvas.height = window.innerHeight;
+            ambientParticles = [];
+            const purpleColors = ['#c084fc', '#e879f9', '#d8b4fe', '#a855f7'];
+            for (let i = 0; i < 30; i++) {
+                ambientParticles.push({
+                    x: Math.random() * ambW,
+                    y: Math.random() * ambH,
+                    radius: 1.5 + Math.random() * 3.0,
+                    alpha: 0.2 + Math.random() * 0.5,
+                    color: purpleColors[Math.floor(Math.random() * purpleColors.length)],
+                    vy: -0.25 - Math.random() * 0.35,
+                    vx: (Math.random() - 0.5) * 0.3
+                });
+            }
+        }
+
+        function renderAmbient() {
+            actx.clearRect(0, 0, ambW, ambH);
+
+            ambientParticles.forEach(p => {
+                p.y += p.vy;
+                p.x += p.vx;
+
+                if (p.y < -10) p.y = ambH + 10;
+                if (p.x < -10) p.x = ambW + 10;
+                if (p.x > ambW + 10) p.x = -10;
+
+                actx.save();
+                actx.globalAlpha = p.alpha;
+                actx.fillStyle = p.color;
+                actx.beginPath();
+                actx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                actx.fill();
+                actx.restore();
+            });
+
+            requestAnimationFrame(renderAmbient);
+        }
+
+        // --- 3. Event Listeners & Note Interaction ---
+
+        // Tap/Click on Bouquet Canvas
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            spawnSparkles(clickX, clickY);
+
+            const hint = document.getElementById('tapHint');
+            if (hint) hint.style.opacity = '0';
+        });
+
+        // Pre-fill romantic default Turkish note
+        const noteInput = document.getElementById('noteInput');
+        noteInput.value = "Ne ilk kasım, ne ilk kasımpatın \nne son kasımımız, ne de son kasımpatın.";
+
+        // --- Init ---
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            resizeAmbient();
+        });
+
+        window.onload = () => {
+            resizeCanvas();
+            resizeAmbient();
+            renderBouquet();
+            renderAmbient();
+        };
+    </script>
+</body>
+</html>
